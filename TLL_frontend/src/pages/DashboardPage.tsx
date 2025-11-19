@@ -135,18 +135,6 @@ export const DashboardPage: React.FC = () => {
     setSelectedEmails(new Set());
   };
 
-  const toggleEmailSelection = (emailId: string) => {
-    setSelectedEmails(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(emailId)) {
-        newSet.delete(emailId);
-      } else {
-        newSet.add(emailId);
-      }
-      return newSet;
-    });
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Top Header */}
