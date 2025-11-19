@@ -11,7 +11,7 @@ export const emailService = {
   },
 
   // Get emails with filters
-  getEmails: async (filters?: { folder?: string; search?: string; page?: number; limit?: number }): Promise<Email[]> => {
+  getEmails: async (filters?: { folder?: string; search?: string; page?: number; limit?: number }): Promise<{ emails: Email[]; pagination?: any }> => {
     const params = new URLSearchParams();
     if (filters?.folder) params.append('folder', filters.folder);
     if (filters?.search) params.append('search', filters.search);
@@ -19,7 +19,7 @@ export const emailService = {
     if (filters?.limit) params.append('limit', filters.limit.toString());
 
     const response = await apiClient.get(`${API_ENDPOINTS.EMAILS.LIST}?${params}`);
-    return response.data.emails || response.data;
+    return response.data;
   },
 
   // Get emails by folder
