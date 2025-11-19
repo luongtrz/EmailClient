@@ -17,78 +17,12 @@ export const DashboardPage: React.FC = () => {
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [showMobileDetail, setShowMobileDetail] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const isInitialMount = useRef(true);
-
-  const handleMarkAsUnread = async (emailId: string) => {
-    try {
-      // In real app, call API
-      setEmails(prev =>
-        prev.map(e => (e.id === emailId ? { ...e, read: false } : e))
-      );
-    } catch (error) {
-      console.error('Failed to mark as unread:', error);
-    }
-  };
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape to close modals/detail
-      if (e.key === 'Escape') {
-        if (showCompose) {
-          setShowCompose(false);
-        } else if (showMobileDetail) {
-          setShowMobileDetail(false);
-        } else if (selectedEmail) {
-          setSelectedEmail(null);
-        }
-      }
-
-      // C to compose
-      if (e.key === 'c' && !showCompose && e.target === document.body) {
-        setShowCompose(true);
-      }
-
-      // Arrow navigation in email list
-      if (emails.length > 0 && !showCompose) {
-        const currentIndex = selectedEmail 
-          ? emails.findIndex(e => e.id === selectedEmail.id)
-          : -1;
-
-        if (e.key === 'ArrowDown' && currentIndex < emails.length - 1) {
-          e.preventDefault();
-          const nextEmail = emails[currentIndex + 1];
-          handleEmailSelect(nextEmail.id);
-        }
-
-        if (e.key === 'ArrowUp' && currentIndex > 0) {
-          e.preventDefault();
-          const prevEmail = emails[currentIndex - 1];
-          handleEmailSelect(prevEmail.id);
-        }
-
-        // Enter to open email detail
-        if (e.key === 'Enter' && currentIndex >= 0) {
-          setShowMobileDetail(true);
-        }
-      }
-
-      // R to mark as read
-      if (e.key === 'r' && selectedEmail && !showCompose) {
-        handleMarkAsUnread(selectedEmail.id);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [emails, selectedEmail, showCompose, showMobileDetail]);
 
   // Load initial data (folders and seed) - only once
   useEffect(() => {
@@ -114,11 +48,9 @@ export const DashboardPage: React.FC = () => {
         const emailsData = await emailService.getEmails({
           folder: activeFolder,
           search: searchQuery || undefined,
-          page: 1,
-          limit: 20,
         });
         if (isCancelled) return;
-        setEmails(emailsData.emails || []);
+        setEmails(emailsData);
       } catch (error) {
         if (!isCancelled) {
           console.error('Failed to load initial data:', error);
@@ -147,16 +79,11 @@ export const DashboardPage: React.FC = () => {
 
   const loadEmails = async () => {
     try {
-      const response = await emailService.getEmails({
+      const emailsData = await emailService.getEmails({
         folder: activeFolder,
         search: searchQuery || undefined,
-        page: currentPage,
-        limit: 20,
       });
-      setEmails(response.emails || []);
-      if (response.pagination) {
-        setTotalPages(response.pagination.totalPages);
-      }
+      setEmails(emailsData);
     } catch (error) {
       console.error('Failed to load emails:', error);
     }
@@ -184,7 +111,6 @@ export const DashboardPage: React.FC = () => {
     setShowMobileDetail(false);
     setShowMobileMenu(false);
     setSelectedEmails(new Set());
-    setCurrentPage(1);
   };
 
   const handleLogout = () => {
@@ -220,8 +146,6 @@ export const DashboardPage: React.FC = () => {
       return newSet;
     });
   };
-
-  // Removed duplicate handleMarkAsUnread - now defined above
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
@@ -379,41 +303,9 @@ export const DashboardPage: React.FC = () => {
               emails={emails}
               selectedEmailId={selectedEmail?.id || null}
               onEmailSelect={handleEmailSelect}
-              selectedEmails={selectedEmails}
-              onToggleSelection={toggleEmailSelection}
-              onSelectAll={() => {
-                if (emails.every(e => selectedEmails.has(e.id))) {
-                  setSelectedEmails(new Set());
-                } else {
-                  setSelectedEmails(new Set(emails.map(e => e.id)));
-                }
-              }}
             />
           )}
         </div>
-
-        {/* Pagination */}
-        {!isLoading && totalPages > 1 && (
-          <div className="border-t border-gray-200 px-4 py-3 bg-white flex items-center justify-between">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ← Previous
-            </button>
-            <span className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next →
-            </button>
-          </div>
-        )}
 
         {/* Column 3: Email Detail - Full width on mobile/tablet, 40% on desktop */}
         <div className={`
